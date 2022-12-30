@@ -1,4 +1,3 @@
-from operator import index
 import matplotlib.pyplot as plt
 import urllib.request as req
 import json
