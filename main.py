@@ -94,7 +94,7 @@ class CloudVariable:
         else:
             raise Exception("Use the \"create_graph\" method to create a graph before executing.")
 
-    # @cache ←こいつが元凶
+    # @cache ←こいつのせいでバグった
     @staticmethod
     def remove_duplicates(json_list: list[dict]) -> list[dict]:
         all = list()
