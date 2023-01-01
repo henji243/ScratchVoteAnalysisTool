@@ -1,9 +1,14 @@
-import matplotlib.pyplot as plt
 import urllib.request as req
 import json
-
 from typing import Any, Union
-from functools import cache
+
+import matplotlib.pyplot as plt
+
+try:
+    import japanize_matplotlib
+except ModuleNotFoundError:
+    plt.rcParams["font.family"] = "meiryo"
+    plt.rcParams["font.sans-serif"] = ["Yu Gothic", "Meirio", "Noto Sans CJK JP"]
 
 
 class CloudVariable:
@@ -12,36 +17,41 @@ class CloudVariable:
             project_id: int,
             limit: int = 100,
             offset: int = 0,
-            backup: Union[list[dict], str] = None,
+            backup: Union[list[dict], str] = [],
             username: str = None
         ) -> None:
 
-        response = req.urlopen(
+        api_responce = req.urlopen(
             f"https://clouddata.scratch.mit.edu/logs?projectid={project_id}&limit={limit}&offset={offset}"
         )
         self._user_name = username
         self.params = {"project_id": project_id, "limit": limit, "offset": offset}
-        api_responce = json.loads(response.read().decode())
+
+        api_responce = json.loads(api_responce.read().decode())
+        if not backup == []:
+            backup = list(filter(lambda x:x not in api_responce, backup))
+        vote_data = api_responce + backup
         self._logs = list(
-            filter(lambda x: "☁ @scratchattach" not in x.values(), api_responce)
+            filter(lambda x: "☁ @scratchattach" not in x.values(), vote_data)
         )
         self.__graph_created = False
 
         if username:
             self._logs = [i for i in self._logs if not i["user"] == username]
 
-    def latest_results(self, remove_duplicates: bool = True) -> dict:
-        """_summary_
+    def latest_results(self, remove_duplicates: bool = True, allow_different_item: bool = True) -> dict:
+        """Returns the latest vote results.
 
         Args:
-            remove_duplicates (bool, optional): 同じユーザーによる投票を除去します。 Defaults to True.
+            remove_duplicates (bool, optional): If a user voted for the same item, it will be removed.
+            allow_different_item (bool, optional): Allow the same user to vote on different items.If the ``remove_duplicates`` argument is false, it is ignored.
 
         Returns:
-            dict: 変数名と数の辞書を返します
+            dict: Dictionaries of item names and vote counts
         """
         data = sorted(self._logs, key=lambda x: x["timestamp"], reverse=False)  # 一応
         if remove_duplicates:
-            data = self.remove_duplicates(data)
+            data = self._remove_duplicates(data, allow_different_item)
         result = dict()
         for i in data:
             if (var := i["name"][2:]) in result.keys():
@@ -52,6 +62,16 @@ class CloudVariable:
 
     @property
     def most_vote_key(self, remove_duplicates: bool = True) -> str:
+        """Returns the name of the item with the most votes.
+
+        Args:
+            remove_duplicates (bool, optional): If a user voted for the same item, it will be removed.
+            allow_different_item: (bool, optional): Allow the same user to vote on different items.
+            If the ``remove_duplicates`` argument is false, it is ignored.
+
+        Returns:
+            str: Name of most common item
+        """
         vote_result = self.latest_results(remove_duplicates=remove_duplicates)
         return max(vote_result, key=vote_result.get)
 
@@ -65,24 +85,35 @@ class CloudVariable:
             self,
             digit: int = 2,
             remove_duplicates: bool = True,
+            allow_different_item: bool = True,
             sort_list: list = None,
             colors: Union[list, tuple] = None,
             startangle: int = 90,
             title: str = "結果"
-        ) -> Any:
+        ) -> None:
+        """Create a graph of the voting results.
 
-        data = self.latest_results(remove_duplicates)
+        Args:
+            digit (int, optional): Number of digits to display the percentage
+            remove_duplicates (bool, optional): If a user voted for the same item, it will be removed.
+            allow_different_item: (bool, optional): Allow the same user to vote on different items.
+            If the ``remove_duplicates`` argument is false, it is ignored.
+            sort_list (list, optional): The order in which the graphs are displayed
+            colors (Union[list, tuple], optional): Graph Color
+            startangle (int, optional): Starting angle of pie chart
+            title (str, optional): Graph title
+        """
+
+        data = self.latest_results(remove_duplicates, allow_different_item)
         graph_digit = f"%1.{digit}f%%"
         # 辞書の順番でグラフが変わる
         if not sort_list is None:
             data = sorted(data.items(), key=lambda x:list(map(lambda x:x.lower(), sort_list)).index(x[0].lower()))
             data = dict((x, y) for x, y in data)
 
-        plt.rcParams["font.family"] = "meiryo"
-        plt.rcParams["font.sans-serif"] = ["Yu Gothic", "Meirio", "Noto Sans CJK JP"]
         plt.pie(data.values(), labels=data.keys(),
                 counterclock=False, startangle=startangle,
-                colors=colors, autopct=graph_digit,
+                colors=colors, autopct=graph_digit
         )
         plt.title(title)
         self.__graph_created = True
@@ -93,21 +124,30 @@ class CloudVariable:
         else:
             raise Exception("Use the \"create_graph\" method to create a graph before executing.")
 
-    # @cache ←こいつのせいでバグった
     @staticmethod
-    def remove_duplicates(json_list: list[dict]) -> list[dict]:
+    def _remove_duplicates(json_list: list[dict], allow_different_item: bool = True) -> list[dict]:
         all = list()
         for index, data in enumerate(json_list):
-            if (data := (data["user"], data["name"])) not in all:
-                all.append(data)
+            if allow_different_item:
+                vote_data = (data["user"], data["name"])
+            else:
+                vote_data = data["user"]
+
+            if vote_data not in all:
+                all.append(vote_data)
             else:
                 json_list.pop(index)
         return json_list
 
 
 if __name__ == "__main__":
-    a = CloudVariable(643164196, username="henji243")
+    bkup = open(r"C:\Users\username\Desktop\data.json", "r", encoding="utf8")
+    data = json.load(bkup)
+    bkup.close()
+
+    a = CloudVariable(643164196, username="henji243", backup=data)
     print("start")
-    print(a.latest_results(remove_duplicates=True))
+    print(a.latest_results(remove_duplicates=True, allow_different_item=False))
     a.create_graph(remove_duplicates=True, sort_list=["windows", "mac", "linux", "chrome os", "その他"])
-    a.save_graph("test.png")
+    a.save_graph("test.svg")
+
