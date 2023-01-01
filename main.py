@@ -49,7 +49,7 @@ class CloudVariable:
         Returns:
             dict: Dictionaries of item names and vote counts
         """
-        data = sorted(self._logs, key=lambda x: x["timestamp"], reverse=False)  # 一応
+        data = sorted(self._logs, key=lambda x: x["timestamp"], reverse=False)
         if remove_duplicates:
             data = self._remove_duplicates(data, allow_different_item)
         result = dict()
