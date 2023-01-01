@@ -24,7 +24,7 @@ class CloudVariable:
         api_responce = req.urlopen(
             f"https://clouddata.scratch.mit.edu/logs?projectid={project_id}&limit={limit}&offset={offset}"
         )
-        self._user_name = username
+        self.user_name = username
         self.params = {"project_id": project_id, "limit": limit, "offset": offset}
 
         api_responce = json.loads(api_responce.read().decode())
@@ -142,12 +142,11 @@ class CloudVariable:
 
 if __name__ == "__main__":
     bkup = open(r"C:\Users\username\Desktop\data.json", "r", encoding="utf8")
-    data = json.load(bkup)
+    cloud_var = json.load(bkup)
     bkup.close()
 
-    a = CloudVariable(643164196, username="henji243", backup=data)
+    cloud_var = CloudVariable(643164196, username="henji243", backup=cloud_var)
     print("start")
-    print(a.latest_results(remove_duplicates=True, allow_different_item=False))
-    a.create_graph(remove_duplicates=True, sort_list=["windows", "mac", "linux", "chrome os", "その他"])
-    a.save_graph("test.svg")
-
+    print(cloud_var.latest_results(remove_duplicates=True, allow_different_item=False))
+    cloud_var.create_graph(remove_duplicates=True, sort_list=["windows", "mac", "linux", "chrome os", "その他"])
+    cloud_var.save_graph("test.svg")
