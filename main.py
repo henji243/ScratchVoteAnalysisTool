@@ -21,16 +21,16 @@ class CloudVariable:
             username: str = None
         ) -> None:
 
-        api_responce = req.urlopen(
+        api_response = req.urlopen(
             f"https://clouddata.scratch.mit.edu/logs?projectid={project_id}&limit={limit}&offset={offset}"
         )
         self.user_name = username
         self.params = {"project_id": project_id, "limit": limit, "offset": offset}
 
-        api_responce = json.loads(api_responce.read().decode())
+        api_response = json.loads(api_response.read().decode())
         if not backup == []:
-            backup = list(filter(lambda x:x not in api_responce, backup))
-        vote_data = api_responce + backup
+            backup = list(filter(lambda x:x not in api_response, backup))
+        vote_data = api_response + backup
         self._logs = list(
             filter(lambda x: "☁ @scratchattach" not in x.values(), vote_data)
         )
