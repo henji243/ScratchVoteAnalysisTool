@@ -1,5 +1,5 @@
-import urllib.request as req
 import json
+import urllib.request as req
 from typing import Any, Union
 
 import matplotlib.pyplot as plt
